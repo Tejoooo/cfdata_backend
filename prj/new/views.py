@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import check_password
 
 from .models import *
 from .serializers import LoginSerializer,SignupSerializer,RatingSerializer,UserSerializer
@@ -18,9 +19,8 @@ class LoginView(generics.GenericAPIView):
         email = request.data['email']
         password = request.data['password']
         try:
-            user = authenticate(email=email,password=password)
-            if user is not None:
-                login(request,user)
+            user = User.objects.get(email=email)
+            if user is not None and check_password(password, user.password):
                 token_obj,_ = Token.objects.get_or_create(user=user)
                 response = {
                     "message" : "Login Succesfully",
