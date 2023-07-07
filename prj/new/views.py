@@ -1,53 +1,82 @@
 # views.py
 
 from rest_framework.views import APIView
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status,generics
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth import authenticate
+
 from .models import *
-from .serializers import LoginSerializer,SignupSerializer,RatingSerializer
+from .serializers import LoginSerializer,SignupSerializer,RatingSerializer,UserSerializer
 
-class LoginView(APIView):
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        print(request.data)
-        if serializer.is_valid():
-            username = serializer.validated_data['username']
-            password = serializer.validated_data['password']
 
-            # Authenticate user
-            user = authenticate(username=username, password=password)
+class LoginView(generics.GenericAPIView):
+    def post(self,request:Request):
+        email = request.data['email']
+        password = request.data['password']
+        try:
+            user = authenticate(email=email,password=password)
             if user is not None:
-                refresh = RefreshToken.for_user(user)
-
-                return Response({
-                    'access_token': str(refresh.access_token),
-                    'refresh_token': str(refresh),
-                    'message': 'Login successful.'
-                }, status=status.HTTP_200_OK)
+                login(request,user)
+                token_obj,_ = Token.objects.get_or_create(user=user)
+                response = {
+                    "message" : "Login Succesfully",
+                    "token" : token_obj.key
+                }
+                return Response(data=response,status=status.HTTP_200_OK)
             else:
-                return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                response = {
+                    "error" : "Login Credentials doesn't matched"
+                }
+                return Response(data=response,status=status.HTTP_404_NOT_FOUND)
+        except User.DoesNotExist:
+            response = {
+                "error" : "User Doesn't exist"
+            }
+            return Response(data=response,status=status.HTTP_404_NOT_FOUND)
 
 
-class SignupView(APIView):
-    def post(self, request):
-        serializer = SignupSerializer(data=request.data)
-        print(request.data)
+class SignUpView(generics.GenericAPIView):
+    serializer_class = UserSerializer
+
+    def post(self,request:Request):
+        data = request.data
+        username = data['username']
+        email = data['email']
+        username_exits = User.objects.filter(username=username).exists()
+        if username_exits:
+            response = {
+                "username":"UserName Already exits"
+            }
+            return Response(data=response,status=status.HTTP_400_BAD_REQUEST)
+
+        email_exits = User.objects.filter(email=email).exists()
+        if email_exits:
+            response = {
+                "email":"Email Already exits"
+            }
+            return Response(data=response,status=status.HTTP_400_BAD_REQUEST)
+
+
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            user =serializer.save()
+            token_obj,_ = Token.objects.get_or_create(user=user)
+            response = {
+                "message":"User Created Succesfully",
+                "data":serializer.data,
+                "token":token_obj.key
+            }
 
-            refresh = RefreshToken.for_user(user)
-
-            return Response({
-                'access_token': str(refresh.access_token),
-                'refresh_token': str(refresh),
-                'message': 'Signup successful.'
-            }, status=status.HTTP_201_CREATED)
+            return Response(data=response,status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            response = {
+                "error":"Error occured"
+            }
+            return Response(data=response,status=status.HTTP_400_BAD_REQUEST)
 
 
 
