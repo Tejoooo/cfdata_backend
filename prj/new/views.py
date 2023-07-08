@@ -16,10 +16,10 @@ from .serializers import LoginSerializer,SignupSerializer,RatingSerializer,UserS
 
 class LoginView(generics.GenericAPIView):
     def post(self,request:Request):
-        email = request.data['email']
+        username = request.data['username']
         password = request.data['password']
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(username=username)
             if user is not None and check_password(password, user.password):
                 token_obj,_ = Token.objects.get_or_create(user=user)
                 response = {
