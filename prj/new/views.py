@@ -84,6 +84,23 @@ class RatingView(generics.ListCreateAPIView):
     queryset = Rating.objects.all()
     serializer_class = RatingSerializer
 
+    def get(request):
+        token = request.GET.get('token')
+        print(token)
+
+    def post(self,request):
+        data = request.data
+        token_user = Token.objects.get(key=data['token'])
+        user = token_user.user
+
+        serializer = RatingSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(user=user)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+        
+
+
 class RatingDelete(generics.DestroyAPIView):
     queryset = Rating.objects.all()
     serializer_class = RatingSerializer

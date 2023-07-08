@@ -35,7 +35,7 @@ class SignupSerializer(serializers.ModelSerializer):
 class RatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
-        fields = '__all__'
+        fields = ['username','rating']
 
 class UserSerializer(serializers.ModelSerializer):
     
